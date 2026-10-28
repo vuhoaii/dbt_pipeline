@@ -1,0 +1,30 @@
+name: dbt CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. Lấy code từ GitHub
+      uses: actions/checkout@v3
+
+    - name: 2. Cài đặt Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: 3. Cài đặt dbt-bigquery
+      run: pip install dbt-bigquery
+
+    - name: 4. Giải mã chìa khóa Google Cloud
+      run: |
+        echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > keyfile.json
+
+    - name: 5. Chạy dbt test
+      run: dbt test --profiles-dir .
