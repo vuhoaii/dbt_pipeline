@@ -30,4 +30,4 @@ jobs:
       run: dbt deps
 
     - name: 6. Chạy dbt test
-      run: dbt test --profiles-dir .
+      run: dbt test --target dev --profiles-dir .

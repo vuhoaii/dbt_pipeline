@@ -1,11 +1,20 @@
 jaffle_shop:
-  target: dev
+  target: dev  # Mặc định khi chạy sẽ dùng môi trường dev
   outputs:
     dev:
       type: bigquery
       method: service-account
       project: smooth-research-493417-k7
-      dataset: jaffle_shop
+      dataset: jaffle_shop          # Trỏ vào dataset Dev
       keyfile: keyfile.json
       threads: 4
-      location: US  # Nhớ đổi thành US nếu lúc tạo Dataset bạn chọn US, hoặc asia-southeast1 nếu bạn chọn cái đó
+      location: US
+
+    prod:                           # Thêm môi trường Prod
+      type: bigquery
+      method: service-account
+      project: smooth-research-493417-k7
+      dataset: jaffle_shop_prod     # Trỏ vào dataset Prod mới tạo
+      keyfile: keyfile.json
+      threads: 4
+      location: US
