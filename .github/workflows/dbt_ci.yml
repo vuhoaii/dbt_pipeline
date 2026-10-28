@@ -1,13 +1,15 @@
-name: dbt CI Pipeline
+name: dbt CI/CD Pipeline
 
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
+  # PHẦN 1: CI (Test trên Dev)
   dbt-test:
     runs-on: ubuntu-latest
-
     steps:
     - name: 1. Lấy code từ GitHub
       uses: actions/checkout@v3
@@ -15,7 +17,7 @@ jobs:
     - name: 2. Cài đặt Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11' # Sửa thành 3.11 để hết cảnh báo vàng
+        python-version: '3.11'
 
     - name: 3. Cài đặt dbt-bigquery
       run: pip install dbt-bigquery
@@ -23,11 +25,36 @@ jobs:
     - name: 4. Giải mã chìa khóa Google Cloud
       run: |
         echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > keyfile.json
-        echo "Kích thước file chìa khóa:" 
-        ls -l keyfile.json # In ra kích thước để kiểm tra
 
     - name: 5. Cài đặt thư viện phụ thuộc
       run: dbt deps
 
-    - name: 6. Chạy dbt test
+    - name: 6. Chạy dbt test (Trên môi trường Dev)
       run: dbt test --target dev --profiles-dir .
+
+  # PHẦN 2: CD (Tự động triển khai lên Prod)
+  deploy-prod:
+    needs: dbt-test # Điều kiện tiên quyết: Phải chạy xong job dbt-test và job đó phải THÀNH CÔNG (xanh)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Chỉ chạy khi push code lên nhánh main (không chạy khi có ai tạo Pull Request)
+    runs-on: ubuntu-latest
+    steps:
+    - name: 1. Lấy code từ GitHub
+      uses: actions/checkout@v3
+
+    - name: 2. Cài đặt Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 3. Cài đặt dbt-bigquery
+      run: pip install dbt-bigquery
+
+    - name: 4. Giải mã chìa khóa Google Cloud
+      run: |
+        echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > keyfile.json
+
+    - name: 5. Cài đặt thư viện phụ thuộc
+      run: dbt deps
+
+    - name: 6. Chạy dbt run (Trên môi trường Prod)
+      run: dbt run --target prod --profiles-dir .
