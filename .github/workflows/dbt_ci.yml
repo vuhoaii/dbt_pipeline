@@ -26,5 +26,9 @@ jobs:
       run: |
         echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > keyfile.json
 
-    - name: 5. Chạy dbt test
+
+    - name: 5. Cài đặt các thư viện phụ thuộc (dbt deps)
+      run: dbt deps
+
+    - name: 6. Chạy dbt test
       run: dbt test --profiles-dir .
