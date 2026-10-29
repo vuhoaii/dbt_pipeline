@@ -7,12 +7,12 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # PHẦN 1: CI (Test trên Dev)
+  # PHẦN 1: SLIM CI (Chỉ test những file thay đổi)
   dbt-test:
     runs-on: ubuntu-latest
     steps:
     - name: 1. Lấy code từ GitHub
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: 2. Cài đặt Python
       uses: actions/setup-python@v4
@@ -29,17 +29,31 @@ jobs:
     - name: 5. Cài đặt thư viện phụ thuộc
       run: dbt deps
 
-    - name: 6. Chạy dbt test (Trên môi trường Dev)
-      run: dbt test --target dev --profiles-dir .
+    - name: 6. Tải "Bản đồ cũ" (Manifest) từ lần chạy trước
+      uses: actions/download-artifact@v4
+      with:
+        name: prod-manifest
+        path: ./prod-state
+      continue-on-error: true # Nếu chưa có bản đồ (lần đầu) thì bỏ qua, không báo lỗi
+
+    - name: 7. Chạy Slim CI (Chỉ test file thay đổi)
+      run: |
+        if [ -f "./prod-state/manifest.json" ]; then
+          echo "Tìm thấy bản đồ cũ. Đang chạy Slim CI..."
+          dbt test --select state:modified+ --state ./prod-state --target dev --profiles-dir .
+        else
+          echo "Không tìm thấy bản đồ cũ. Chạy test toàn bộ..."
+          dbt test --target dev --profiles-dir .
+        fi
 
   # PHẦN 2: CD (Tự động triển khai lên Prod)
   deploy-prod:
-    needs: dbt-test # Điều kiện tiên quyết: Phải chạy xong job dbt-test và job đó phải THÀNH CÔNG (xanh)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Chỉ chạy khi push code lên nhánh main (không chạy khi có ai tạo Pull Request)
+    needs: dbt-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
     - name: 1. Lấy code từ GitHub
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: 2. Cài đặt Python
       uses: actions/setup-python@v4
@@ -58,3 +72,9 @@ jobs:
 
     - name: 6. Chạy dbt run (Trên môi trường Prod)
       run: dbt run --target prod --profiles-dir .
+
+    - name: 7. Lưu "Bản đồ mới" (Manifest) cho lần sau
+      uses: actions/upload-artifact@v4
+      with:
+        name: prod-manifest
+        path: target/manifest.json
