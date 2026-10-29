@@ -30,11 +30,13 @@ jobs:
       run: dbt deps
 
     - name: 6. Tải "Bản đồ cũ" (Manifest) từ lần chạy trước
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v2
       with:
+        workflow: dbt_ci.yml # Tên file workflow của bạn
+        branch: main         # Chỉ tìm trong nhánh main
         name: prod-manifest
         path: ./prod-state
-      continue-on-error: true # Nếu chưa có bản đồ (lần đầu) thì bỏ qua, không báo lỗi
+        if_no_artifact_found: warn # Nếu lần đầu chưa có thì cảnh báo nhẹ, không làm sập
 
     - name: 7. Chạy Slim CI (Chỉ test file thay đổi)
       run: |
