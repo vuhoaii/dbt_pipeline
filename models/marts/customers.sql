@@ -11,7 +11,7 @@ orders as (
     select * from {{ ref('orders') }}
 
 ),
-
+-----HI xin chao
 customer_orders_summary as (
 
     select
